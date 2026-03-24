@@ -22,3 +22,6 @@ This project analyses London bike journey data using R.
 1. Open analysis.Rmd in RStudio
 2. Install required packages
 3. Click "Knit" to generate report
+
+Dataset not included due to size. 
+You can use any similar London bike dataset or contact me for access.
