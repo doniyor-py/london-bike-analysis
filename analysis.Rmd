@@ -1,0 +1,189 @@
+---
+title: "London Bike Journeys - August 2023"
+subtitle: "Exploratory Data Analysis"
+author: "Doniyor"
+date: "March 2026"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+---
+title: "London Bike Journeys - August 2023"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r}
+
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(knitr)
+library(kableExtra)
+
+```
+
+## Introduction
+
+This report explores **776,527 bike journeys** recorded across London during **August 2023**, 
+using data from the Santander Cycles (TfL) scheme. August represents one of the busiest 
+months for cycling in London due to warmer weather and tourist activity.
+
+The analysis focuses on three key areas:
+
+- **Trip Duration & Patterns** — How long are journeys, and do they vary by day?
+- **Most Popular Stations** — Which docking stations see the highest demand?
+- **Peak Hours** — When during the day and week are bikes used most?
+
+```{r}
+bikes <- read_csv("LondonBikeJourneyAug2023.csv")
+
+bikes <- bikes %>%
+  rename(
+    start_date   = `Start date`,
+    end_date     = `End date`,
+    start_station = `Start station`,
+    end_station   = `End station`,
+    bike_model   = `Bike model`,
+    duration_ms  = `Total duration (ms)`
+  ) %>%
+  mutate(
+    start_date   = mdy_hm(start_date),
+    end_date     = mdy_hm(end_date),
+    duration_min = duration_ms / 60000, 
+    hour         = hour(start_date),
+    day          = wday(start_date, label = TRUE),
+    week         = week(start_date)
+  ) %>%
+  filter(duration_min > 0, duration_min < 180)
+```
+
+## Trip Duration & Patterns
+
+Understanding how long people cycle helps reveal the purpose of journeys — 
+short trips under 10 minutes likely reflect commutes or quick errands, 
+while longer trips may indicate leisure rides, especially on weekends.
+
+The histogram below shows the distribution of all trip durations in August 2023. 
+Trips longer than 60 minutes have been excluded from the chart for clarity, 
+though they are included in all calculations.
+
+```{r}
+data.frame(
+  Metric = c("Minimum", "Median", "Mean", "Maximum"),
+  Minutes = c(0.02, 13.9, 18.6, 180)
+) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+ggplot(bikes, aes(x = duration_min)) +
+  geom_histogram(binwidth = 2, fill = "#E63946", color = "white") +
+  scale_x_continuous(limits = c(0, 60)) +
+  labs(title = "Distribution of Trip Durations",
+       x = "Duration (minutes)", y = "Number of Trips") +
+  theme_minimal()
+
+bikes %>%
+  group_by(day) %>%
+  summarise(avg_duration = mean(duration_min)) %>%
+  ggplot(aes(x = day, y = avg_duration)) +
+  geom_col(fill = "#457B9D") +
+  labs(title = "Average Trip Duration by Day",
+       x = "Day", y = "Avg Duration (min)") +
+  theme_minimal()
+```
+
+The bar chart above shows how average trip duration varies across days of the week. 
+Weekend trips (Saturday and Sunday) tend to be longer on average, suggesting 
+cyclists use the bikes more leisurely rather than for commuting purposes.
+
+## Most Popular Stations
+
+With hundreds of docking stations spread across London, demand is not evenly distributed. 
+Stations near transport hubs, tourist attractions, and the City of London 
+financial district tend to see significantly higher usage.
+
+The chart below shows the **top 10 most popular start stations** by number of journeys 
+in August 2023. High rankings near areas like Waterloo, Hyde Park, and 
+the Embankment reflect both commuter and tourist traffic.
+
+```{r}
+bikes %>%
+  count(start_station, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  ggplot(aes(x = reorder(start_station, n), y = n)) +
+  geom_col(fill = "#2A9D8F") +
+  coord_flip() +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Top 10 Most Popular Start Stations",
+       x = NULL, y = "Number of Trips") +
+  theme_minimal()
+
+bikes %>%
+  count(end_station, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  kable(col.names = c("Station", "Trips")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+The table above lists the top 10 most popular **end stations**. Comparing start and end 
+station rankings can reveal interesting directional patterns — for example, whether 
+certain stations are primarily origins (commuters leaving home) or destinations 
+(commuters arriving at work).
+
+## Peak Hours Analysis
+
+Identifying when bikes are used most heavily is crucial for managing bike availability 
+and dock capacity. London's cycling patterns typically reflect its working population, 
+with clear spikes during morning and evening rush hours on weekdays.
+
+The line chart below shows total trips per hour across all of August 2023. 
+Two distinct peaks are visible — one in the **morning (8–9am)** and one in the 
+**evening (5–6pm)** — consistent with typical commuter behaviour.
+
+```{r}
+bikes %>%
+  count(hour) %>%
+  ggplot(aes(x = hour, y = n)) +
+  geom_line(color = "#E76F51", size = 1.2) +
+  geom_point(color = "#E76F51", size = 2) +
+  scale_x_continuous(breaks = 0:23) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Number of Trips by Hour of Day",
+       x = "Hour", y = "Number of Trips") +
+  theme_minimal()
+
+bikes %>%
+  count(day, hour) %>%
+  ggplot(aes(x = hour, y = day, fill = n)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "#CAF0F8", high = "#03045E", labels = comma) +
+  labs(title = "Trip Heatmap: Hour vs Day of Week",
+       x = "Hour of Day", y = NULL, fill = "Trips") +
+  theme_minimal()
+```
+
+The heatmap above combines hour of day with day of week, revealing a more complete 
+picture of usage patterns. Weekday mornings and evenings show the deepest colour, 
+confirming commuter-driven demand. Weekends show a different pattern — 
+activity spreads more evenly through midday hours rather than peaking at rush hour times.
+
+## Conclusion
+
+This analysis of London's Santander Cycles data for August 2023 reveals several 
+clear patterns:
+
+- The **median trip duration is approximately 14 minutes**, with weekend journeys 
+  averaging longer than weekday ones — suggesting a shift from commuting to leisure use.
+- A small number of **central London stations dominate demand**, particularly those 
+  near major transport hubs and tourist areas.
+- Usage follows a clear **double-peak pattern on weekdays** (8–9am and 5–6pm), 
+  while weekends show a flatter, midday-centred distribution.
+
+These insights could help TfL optimise **bike redistribution**, prioritise 
+**dock maintenance**, and plan **capacity during peak periods**.
+
