@@ -1,24 +1,24 @@
-# 🚲 London Bike Data Analysis
+# London Bike Data Analysis
 
-## 📊 Overview
+## Overview
 This project analyses London bike journey data using R.
 
-## 🛠 Tools Used
+## Tools Used
 - R
 - RStudio
 - R Markdown
 
-## 📁 Files
+## Files
 - analysis.Rmd → code
 - analysis.html → final report
 - LondonBikeJourneyAug2023.csv → dataset
 
-## 📈 Key Insights
+## Key Insights
 - Peak usage times were in the morning and evening
 - Most popular stations were in central London
 - Weekdays had higher usage than weekends
 
-## ▶️ How to Run
+##  How to Run
 1. Open analysis.Rmd in RStudio
 2. Install required packages
 3. Click "Knit" to generate report
